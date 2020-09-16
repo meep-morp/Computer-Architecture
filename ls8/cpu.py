@@ -143,8 +143,10 @@ class CPU:
 
         while self.running:
             ir = self.ram_read(self.pc)
-            # print(ir)
-            self.opcodes[ir]()
+            if ir in self.opcodes:
+                self.opcodes[ir]()
+            else:
+                print("Invalid Command")
             number_of_operands = (ir & 0b11000000) >> 6
-            how_far_to_move_pc = number_of_operands + 1
-            self.pc += how_far_to_move_pc
+            bitwise_function = number_of_operands + 1
+            self.pc += bitwise_function
