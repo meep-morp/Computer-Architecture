@@ -82,12 +82,10 @@ class CPU:
         reg_num = self.ram_read(self.pc+1)
         value = self.ram_read(self.pc+2)
         self.reg[reg_num] = value
-        self.pc += 3
 
     def PRN(self):  # prints to console
         reg_num = self.ram_read(self.pc+1)
         print(self.reg[reg_num])
-        self.pc += 2
 
     def HLT(self):
         self.running = False
@@ -145,7 +143,7 @@ class CPU:
 
         while self.running:
             ir = self.ram_read(self.pc)
-            print(ir)
+            # print(ir)
             self.opcodes[ir]()
             number_of_operands = (ir & 0b11000000) >> 6
             how_far_to_move_pc = number_of_operands + 1
