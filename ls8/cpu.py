@@ -20,33 +20,61 @@ class CPU:
         self.reg = [0] * 8
         self.pc = 0
 
+        self.opcodes = {
+            0b10000010: self.LDI,
+            0b01000111: self.PRN,
+            0b00000001: self.HLT,
+            0b10100010: self.MUL,
+            0b10100011: self.DIV,
+            0b10100000: self.ADD,
+            0b10100001: self.SUB
+        }
+
     def load(self):
         """Load a program into memory."""
 
+        args = sys.argv
+
         address = 0
+        if len(sys.argv) != 2:
+            print("Usage: python ls8.py examples/filename")
+            sys.exit(1)
 
-        # For now, we've just hardcoded a program:
+        try:
+            address = 0
 
-        program = [
-            # From print8.ls8
-            0b10000010,  # LDI R0,8
-            0b00000000,
-            0b00001000,
-            0b01000111,  # PRN R0
-            0b00000000,
-            0b00000001,  # HLT
-        ]
+            with open(sys.argv[1]) as f:
+                for line in f:
+                    t = line.split('#')
+                    n = t[0].strip()
 
-        for instruction in program:
-            self.ram[address] = instruction
-            address += 1
+                    if n == '':
+                        continue
+
+                    try:
+                        n = int(n, 2)
+                    except ValueError:
+                        print(f"Invalid number '{n}'")
+                        sys.exit(1)
+
+                    self.ram[address] = n
+                    address += 1
+
+        except FileNotFoundError:
+            print(f"File not found: {sys.argv[1]}")
+            sys.exit(2)
 
     def alu(self, op, reg_a, reg_b):
         """ALU operations."""
 
         if op == "ADD":
             self.reg[reg_a] += self.reg[reg_b]
-        # elif op == "SUB": etc
+        elif op == "MULT":
+            self.reg[reg_a] *= self.reg[reg_b]
+        elif op == "DIV":
+            self.reg[reg_a] //= self.reg[reg_b]
+        elif op == "SUB":
+            self.reg[reg_a] -= self.reg[reg_b]
         else:
             raise Exception("Unsupported ALU operation")
 
@@ -54,16 +82,30 @@ class CPU:
         reg_num = self.ram_read(self.pc+1)
         value = self.ram_read(self.pc+2)
         self.reg[reg_num] = value
-        self.pc += 3
 
     def PRN(self):  # prints to console
         reg_num = self.ram_read(self.pc+1)
         print(self.reg[reg_num])
-        self.pc += 2
 
     def HLT(self):
         self.running = False
         self.pc += 1
+
+    def MUL(self):
+        self.alu('MULT', self.ram_read(self.pc + 1),
+                 self.ram_read(self.pc + 2))
+
+    def SUB(self):
+        self.alu('SUB', self.ram_read(self.pc + 1),
+                 self.ram_read(self.pc + 2))
+
+    def ADD(self):
+        self.alu('ADD', self.ram_read(self.pc + 1),
+                 self.ram_read(self.pc + 2))
+
+    def DIV(self):
+        self.alu('MULT', self.ram_read(self.pc + 1),
+                 self.ram_read(self.pc + 2))
 
     def ram_read(self, ind):
         return self.ram[ind]
@@ -100,12 +142,9 @@ class CPU:
         self.trace()
 
         while self.running:
-            ir = self.ram[self.pc]
-            if ir == 0b10000010:
-                self.LDI()
-            elif ir == 0b01000111:
-                self.PRN()
-            elif ir == 0b00000001:
-                self.running = False
-            else:
-                print("Unknown Memory Type")
+            ir = self.ram_read(self.pc)
+            # print(ir)
+            self.opcodes[ir]()
+            number_of_operands = (ir & 0b11000000) >> 6
+            how_far_to_move_pc = number_of_operands + 1
+            self.pc += how_far_to_move_pc
